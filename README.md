@@ -1,31 +1,57 @@
-# SE3082 — Lab 08 (2026)
+# SE4060-MPI-Part1
+Starter Code MPI code
 
-MPI programming and performance analysis.
+Exercise 1
+Try the following program segment.
 
-| Folder | Activity |
-| --- | --- |
-| Exercise01 | Hello MPI: process ranks and processor names |
-| Exercise02 | Parallel sum of integers 1 through 10,000,000 |
-| Exercise03 | Monte Carlo estimation of pi with 10,000,000 points |
-| Exercise04 | Reference timing results and performance graphs |
-| examples/messaging | Synchronous integer and array messaging (at least 4 processes) |
-| cluster | PBS and ARCHER2 examples from the source repository |
-| docs | Original supplied instructions |
-
-## Build and run
-
-Requires an MPI C++ compiler, an MPI launcher, and GNU make.
-
-```sh
-make
-make run NP=4
-make benchmark
-make messaging NP=4
-make clean
+```c
+// HelloMPI.c
+#include <cstdio>
+#include <cstdlib>
+#include <mpi.h>
+int main(void)
+{
+    int rank;
+    MPI_Init(NULL, NULL);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    char name[30];
+    int len;
+    MPI_Get_processor_name( name, &len );
+    if (rank == 0)
+      printf("Hello World! From rank %d machine %s\n", rank, name);
+    else
+      printf("Just a normal process From rank %d machine %s\n", rank, name);
+    MPI_Finalize();
+}
 ```
 
-`make benchmark` runs the three programs with 1, 2, 4, and 8 processes and writes fresh output to `results/`. Ensure your MPI environment has enough process slots (or configure its launcher accordingly). Exercise 2's expected sum is **50,000,005,000,000**. Exercise 3 is a random estimate, so its answer should be close to pi rather than exactly equal.
+Compile the program as follows
 
-The imported spreadsheet and timing report contain the source author's measurements. They are reference data, not measurements from this repository. Compilation and MPI runs have not been verified in this Windows environment. Cluster examples require site-specific account, allocation, and executable setup; they are not submitted automatically.
+```mpiicpc -o job1 HelloMPI.c```
 
-See [SOURCES.md](SOURCES.md) for provenance and changes.
+You can control the number of threads to be used by adding the following in the pbs file.
+
+
+```
+#PBS -l nodes=1
+#PBS -l walltime=00:02:00
+#PBS -l select=1
+cat $PBS_NODEFILE
+NPROC=2
+cd $PBS_O_WORKDIR
+MPISIZE=$NPROC
+MPIPROG=`basename $PBS_JOBNAME .pbs`
+echo 'Running MPI program' $MPIPROG 'on' $MPISIZE 'processes'
+echo 'Started at' `date`
+echo '--------------------------------------------------------------------------------'
+(time mpirun -n $MPISIZE ./$MPIPROG) 2>&1
+echo '--------------------------------------------------------------------------------'
+echo 'Finished at' `date`
+```
+
+Run the program by submitting the job to the queue
+
+```qsub job1.pbs```
+
+Note: The above pbs script is written in such a way that the execution program should have the
+same name as the pbs script, that is the executable file should be named as job1
